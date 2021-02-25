@@ -1,0 +1,66 @@
+# FROM: ベースイメージの指定
+FROM ubuntu:latest
+# RUN: Linuxコマンド
+RUN apt update
+RUN apt install -y\
+    curl \
+    cvs \
+    nginx
+
+RUN mkdir /new_dir
+
+# COPY: buildするフォルダ(Dockerfileがあるフォルダ)内のファイルをコンテナ内にコピー
+# COPY <file_name> <dir_in_container>
+COPY something /new_dir/
+
+# .tarファイルをコピーし、コンテナ内で解答する際に利用
+# フォルダ階層ごと持っていくようなケース
+# ADD <file_name> <dir_in_container>
+ADD compressed.tar /
+
+
+# RUN で実行するLinuxコマンドは基本root直下で実行される。
+# ただし&&で繋いだ場合で、cdで移動した後の実行は反映される\（次のRUNコマンドでのカレントディレクトリはrootに戻る）
+# WORKDIRでRUNの場所を動かせる
+# WORKDIRで指定したフォルダ名がない場合は勝手に作るので、mkdirは不要
+WORKDIR /new_dir
+
+
+
+# ENV: 環境変数を設定
+# ENV <key> <value>
+# ENV <key>=<value>
+# どちらでもいい
+ENV key1=value
+
+
+
+
+
+
+
+
+
+
+
+
+# コンテナのデフォルトコマンドの定義
+# CMD ["executable", "param1", "param2"]
+# 原則Dockerfileの最後に記述
+# 一つだけ
+CMD ["/bin/bash"]
+
+# ENTRYPOINT は CMD と違い実行時に上書きできないコマンド
+# ENTRYPOINT がある場合 CMD は ENTRYPOINT で指定したコマンドの引数を入力
+
+
+###### Layerをなるべく少なるする #######
+
+# Layerを作るのは RUN, COPY, ADD
+# なるべく少ないレイヤーのイメージを作るべき
+# コマンドを && でつなげる。バックスラッシュで改行する
+# ただし、複数のいイメージで共通で使いたいレイヤーがあれば分けておく
+# これができると、共通のレイヤはビルドし直さず、再利用が可能
+
+###### ポイント #######
+# interactiveな対応はできないので、apt intall -y オプションのようにyes指定しておく
