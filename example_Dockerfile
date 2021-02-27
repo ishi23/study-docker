@@ -1,5 +1,49 @@
+### 基本ルール ###
+# ファイル名は"Dockerfile"でなければならない。(なので本ファイルはダメ)
+# フォルダを作成し、その中にDockerfileを作成する
+# そのフォルダ内にdocker imageに持ち込むファイルも入れておく
+# dockerレイヤーを最小限にするための工夫をする（RUN, COPY , ADD)
+# dockerファイルを少し書き換えてbuildテスト〜とすると膨大な時間がかかるので、cache（レイヤ）をうまく使う
+
+
+### レイヤを減らすには ###
+# 悪い例(レイヤーがたくさんできてしまう)
+### RUN touch file
+### RUN echo "hello world"
+### RUN apt install -y abcd
+### RUN apt install -y uiop
+### RUN apt install -y ljjj
+# 最小限の例（レイヤー数が最小限。ただし変更する度に全てを実行し直す必要がある。開発中は下にあるようにキャッシュの考え方で分けるべき）
+###     RUN touch file\
+###         && echo "hello-world"\ 
+###         && apt update\
+###         && apt install -y abcd\
+###              uiop\
+###              ljjj
+
+
+# キャッシュを使ってdockerfileの編集とテストを速やかに
+###     RUN touch file\
+###         && echo "hello-world"
+###     RUN apt update
+###     RUN apt install -y abcd \
+###              uiop \
+###              ljjj
+###     RUN apt install -y add-package  #追加してビルドする際に上記のレイヤは保存済みなので追加分のレイヤのみのビルドで済む。
+### 完成した段階でレイヤを減らしたDockerfileをまとめる
+
+
+### 書き方の注意 ###
+# インタラクティブな部分は排除して作らなければならない
+# 例えば、〜〜しますか　(y/n)　みたいなものが発生すると環境構築を自動化できない
+# 各コマンドでオプション等を調べて完全自動で最後まで走るようにコマンドラインを設計する
+# 複数並べる際は\で改行すると見やすいし改変しやすい
+
+
 # FROM: ベースイメージの指定
 FROM ubuntu:latest
+
+
 # RUN: Linuxコマンド
 RUN apt update
 RUN apt install -y\
@@ -7,23 +51,25 @@ RUN apt install -y\
     cvs \
     nginx
 
-RUN mkdir /new_dir
+
+RUN mkdir /dir_created_in_dockerfile
+
 
 # COPY: buildするフォルダ(Dockerfileがあるフォルダ)内のファイルをコンテナ内にコピー
 # COPY <file_name> <dir_in_container>
-COPY something /new_dir/
+COPY file_from_local /dir_created_in_dockerfile/
 
-# .tarファイルをコピーし、コンテナ内で解答する際に利用
+# ADD: .tarファイルをコピーし、コンテナ内で解答する際に利用
 # フォルダ階層ごと持っていくようなケース
 # ADD <file_name> <dir_in_container>
-ADD compressed.tar /
+ADD compressed_file_in_local.tar /
 
 
 # RUN で実行するLinuxコマンドは基本root直下で実行される。
 # ただし&&で繋いだ場合で、cdで移動した後の実行は反映される\（次のRUNコマンドでのカレントディレクトリはrootに戻る）
-# WORKDIRでRUNの場所を動かせる
+# WORKDIRではその後のRUN実行のディレクトリを動かせる
 # WORKDIRで指定したフォルダ名がない場合は勝手に作るので、mkdirは不要
-WORKDIR /new_dir
+WORKDIR /dir_created_in_dockerfile
 
 
 
@@ -35,32 +81,12 @@ ENV key1=value
 
 
 
-
-
-
-
-
-
-
-
-
-# コンテナのデフォルトコマンドの定義
+# CMD: コンテナのデフォルトコマンドの定義
 # CMD ["executable", "param1", "param2"]
 # 原則Dockerfileの最後に記述
 # 一つだけ
 CMD ["/bin/bash"]
 
-# ENTRYPOINT は CMD と違い実行時に上書きできないコマンド
+# ENTRYPOINT は CMD と違い実行時に上書きできないコマンド(当面使わない？)
 # ENTRYPOINT がある場合 CMD は ENTRYPOINT で指定したコマンドの引数を入力
 
-
-###### Layerをなるべく少なるする #######
-
-# Layerを作るのは RUN, COPY, ADD
-# なるべく少ないレイヤーのイメージを作るべき
-# コマンドを && でつなげる。バックスラッシュで改行する
-# ただし、複数のいイメージで共通で使いたいレイヤーがあれば分けておく
-# これができると、共通のレイヤはビルドし直さず、再利用が可能
-
-###### ポイント #######
-# interactiveな対応はできないので、apt intall -y オプションのようにyes指定しておく

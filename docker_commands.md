@@ -1,3 +1,12 @@
+
+イメージレイヤー
+Docker imageeはイメージレイヤーで構成されている
+コンテナを作って編集＝新しくレイヤーを追加して、そのレイヤーに書き込み
+レイヤーが共通している場合にスペース節約できる
+例えばベースがUbuntuというイメージで構成される複数のimageやコンテナはUbuntuよりも上の層だけ付け替えることで作ることができる。
+このため容量削減が可能。
+
+
 # docker commands
 dockerのコマンドメモ
 
@@ -9,7 +18,13 @@ dockerのコマンドメモ
 `$ docker images`
 ### コンテナの確認　(-a無しだとUpのコンテナのみ表示)
 `$ docker ps -a`
-
+CONTAINER ID: 乱数のコンテナID
+IMAGE: コンテナ元のdocker image
+COMMAND: コンテナに指定したコマンド（指定がなければデフォルトコマンド）
+CREATED: 作成日時
+STATUS: UP(起動中)、Exited、
+PORTS: port number
+NAMES: コンテナ名（指定しない場合は適当な名前がつく）
 
 ## イメージ・コンテナ管理
 
@@ -19,6 +34,7 @@ dockerのコマンドメモ
 `$ docker stop <container_name_or_id>`
 ### Up状態のコンテナを再起動する (stopしてstart)
 `$ docker restart <container_name_or_id> `
+####### この際、CONTAINER IDの一部でもユニークであればちゃんと読み取って動いてくれる。全てのコンテナID指定に言える。###########
 
 ### コンテナ指定削除
 Upは削除できないので、docker stop <container_name> しておく必要がある   
@@ -42,9 +58,12 @@ docker rmi <image_name>
 
 
 ## docker run (exec)
-docker run　は　(pull +) careate + start + exec   
-docker exec は 既存する Up のコンテナに入る操作。   
-<command>はbashだとshellに入れる。何も無しだとimageに規定のデフォルトコマンド
+docker run　は　(pull +) careate + start + exec
+手元にイメージがあればそこからコンテナを立てる(create)し、なければpullしてくる。
+docker startはコンテナをUPにする。docker exec は 既存する Up のコンテナに入る。   
+<command>はbashだとshellに入れる。何も無しだとimageに規定のデフォルトコマンド。
+既に存在するコンテナに入る場合はdocker runではなくdocker execを使うことに注意。
+dokcer runだと新たなコンテナが作成されてしまう。
 
 ```
 ### -it コンテナ内に留まる　（コンテナ内でexitで出る）
@@ -75,9 +94,18 @@ $ docker run -it -p <host_port>:<container_port> <image> <command>
 $ docker run -it cpus 4 --memory 2g <image> <command>
 ```
 
+## コンテナから出る
+exit
+Exited状態になる
+detach
+UPのまま。あまり使わなくて良さそう。
 
 ## imageを作る
-
+Docker Hubのリポジトリを作る
+リポジトリ名はハイフンで繋げる
+リポジトリ名とイメージ名を同じにする必要がある。
+docker tag <user-name>/<repo-name> # docker image名の変更
+そのリポジトリ
 
 ### コンテナからimageを作る
 ```
@@ -90,7 +118,9 @@ $ docker push <image>
 
 ### Dockerfileからimageを作る
 Dockerfileの書き方は別ファイルにメモ   
-build contextとはbuildに指定するフォルダのこと   
+build用のフォルダにDockerfileと持ち込みファイルを用意した状態での操作を下に記述する。
+build contextとはbuildに指定するフォルダのこと。build contextをdocker daemonの渡してbuildする.
+docker daemonはサーバーというイメージ。なので別マシンにも置ける。ただあまり意識しなくても良い。 
 ```
 # カレントディレクトリから'Dockerfile'を探してビルド
 $ docker build .
